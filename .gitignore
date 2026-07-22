@@ -1,0 +1,17 @@
+node_modules/
+out/
+dist/
+release/
+build/
+*.log
+.DS_Store
+Thumbs.db
+.env
+.env.local
+
+# Local app data if ever accidentally generated inside the repo
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.key.enc
