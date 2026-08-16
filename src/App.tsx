@@ -7,6 +7,8 @@ import HomeScreen from '@renderer/routes/Home/HomeScreen'
 import SettingsScreen from '@renderer/routes/Settings/SettingsScreen'
 import ProjectDetailScreen from '@renderer/routes/Project/ProjectDetailScreen'
 import ProjectWizardScreen from '@renderer/routes/Project/ProjectWizardScreen'
+import TrialWizardScreen from '@renderer/routes/Trial/TrialWizardScreen'
+import TrialWorkspaceScreen from '@renderer/routes/Trial/TrialWorkspaceScreen'
 
 export default function App(): JSX.Element {
   const { hasCompletedWelcome, hasAnyKey, loading, refresh } = useAppStore()
@@ -47,6 +49,8 @@ export default function App(): JSX.Element {
       <Route path="/settings" element={<SettingsScreen />} />
       <Route path="/project/new" element={<ProjectWizardScreen />} />
       <Route path="/project/:projectId" element={<ProjectDetailScreen />} />
+      <Route path="/project/:projectId/trial/new" element={<TrialWizardScreen />} />
+      <Route path="/project/:projectId/trial/:trialId" element={<TrialWorkspaceScreen />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

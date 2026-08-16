@@ -7,6 +7,7 @@ import { registerSettingsIpc } from './ipc/settings'
 import { registerProjectsIpc } from './ipc/projects'
 import { registerPersonasIpc } from './ipc/personas'
 import { registerFeedbackSchemaIpc } from './ipc/feedbackSchema'
+import { registerTrialsIpc } from './ipc/trials'
 
 const isDev = !app.isPackaged
 
@@ -55,6 +56,7 @@ function registerIpcHandlers(): void {
   registerProjectsIpc()
   registerPersonasIpc()
   registerFeedbackSchemaIpc()
+  registerTrialsIpc()
 }
 
 app.whenReady().then(() => {

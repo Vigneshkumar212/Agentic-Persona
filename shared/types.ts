@@ -260,12 +260,46 @@ export interface PersonasApi {
   getBudgetStatus(projectId: string, trialId: string | null): Promise<import('./cost').BudgetCheckResult>
 }
 
+// ---------------------------------------------------------------------------
+// Trials: doc upload, feedback collection, aggregation, export
+// ---------------------------------------------------------------------------
+
+export interface CreateTrialInput {
+  projectId: string
+  name: string
+  explanation?: string
+}
+
+export interface PickAndAddDocumentsResult {
+  documents: TrialDocument[]
+  /** Filenames rejected for an unsupported type or exceeding the size cap. */
+  skipped: string[]
+}
+
+export interface TrialsApi {
+  list(projectId: string): Promise<Trial[]>
+  get(id: string): Promise<Trial | null>
+  create(input: CreateTrialInput): Promise<Trial>
+  setFeedbackSchema(id: string, schema: FeedbackSchema): Promise<void>
+  /** Opens a native multi-select file dialog, copies chosen files into local storage, and counts their tokens. */
+  pickAndAddDocuments(trialId: string): Promise<PickAndAddDocumentsResult>
+  listDocuments(trialId: string): Promise<TrialDocument[]>
+  removeDocument(id: string): Promise<void>
+  /** Generates one persona's feedback for the trial's current (or next follow-up) round. */
+  collectFeedback(trialId: string, personaId: string, extraInstructions?: string): Promise<Feedback>
+  listFeedback(trialId: string): Promise<Feedback[]>
+  generateSummary(trialId: string): Promise<TrialSummary>
+  /** Opens a native save dialog and writes the Markdown export; returns the chosen path, or null if canceled. */
+  exportMarkdown(trialId: string): Promise<string | null>
+}
+
 export interface Api {
   app: AppApi
   settings: SettingsApi
   projects: ProjectsApi
   personas: PersonasApi
   feedbackSchema: FeedbackSchemaApi
+  trials: TrialsApi
 }
 
 declare global {

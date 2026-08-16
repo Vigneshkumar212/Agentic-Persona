@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import type { Project } from '@shared/types'
 import { PROVIDERS } from '@shared/providers'
 import PersonaPanelSection from '@renderer/routes/Project/PersonaPanelSection'
-import FeedbackSchemaSection from '@renderer/routes/Project/FeedbackSchemaSection'
+import TrialListSection from '@renderer/routes/Project/TrialListSection'
+import FeedbackSchemaSection from '@renderer/components/FeedbackSchemaSection'
 
 export default function ProjectDetailScreen(): JSX.Element {
   const { projectId } = useParams<{ projectId: string }>()
@@ -70,13 +71,24 @@ export default function ProjectDetailScreen(): JSX.Element {
       ) : (
         <div className="detail-section">
           <p className="muted">
-            This project generates a fresh persona panel per trial. Create a trial to generate its
-            panel — trials land in the next milestone.
+            This project generates a fresh persona panel per trial — open a trial below to build its
+            panel.
           </p>
         </div>
       )}
 
-      <FeedbackSchemaSection project={project} onProjectUpdate={setProject} />
+      <FeedbackSchemaSection
+        title="Feedback schema"
+        description="Personas will be asked these fields during trials, plus freeform comments."
+        savedSchema={project.defaultFeedbackSchema}
+        onDraft={(instructions) => window.api.feedbackSchema.draft(project.id, instructions)}
+        onSave={async (schema) => {
+          await window.api.projects.setDefaultFeedbackSchema(project.id, schema)
+          setProject({ ...project, defaultFeedbackSchema: schema })
+        }}
+      />
+
+      <TrialListSection project={project} />
     </div>
   )
 }

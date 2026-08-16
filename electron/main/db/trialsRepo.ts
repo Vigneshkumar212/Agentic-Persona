@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { getDb } from './database'
-import type { FeedbackSchema, Trial, TrialSummary } from '../../../shared/types'
+import type { CreateTrialInput, FeedbackSchema, Trial, TrialSummary } from '../../../shared/types'
 
 interface TrialRow {
   id: string
@@ -36,12 +36,6 @@ export function listTrials(projectId: string): Trial[] {
 export function getTrial(id: string): Trial | null {
   const row = getDb().prepare('SELECT * FROM trials WHERE id = ?').get(id) as TrialRow | undefined
   return row ? rowToTrial(row) : null
-}
-
-export interface CreateTrialInput {
-  projectId: string
-  name: string
-  explanation?: string
 }
 
 export function createTrial(input: CreateTrialInput): Trial {

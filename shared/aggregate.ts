@@ -71,3 +71,20 @@ export function computeAllAggregates(
 function round2(n: number): number {
   return Math.round(n * 100) / 100
 }
+
+/** Short, human-readable one-liner for a computed aggregate (used in prompts and exports). */
+export function describeAggregate(agg: FieldAggregate): string {
+  switch (agg.type) {
+    case 'rating':
+      return agg.count > 0 ? `avg ${agg.average} (n=${agg.count}, range ${agg.min}-${agg.max})` : 'no answers'
+    case 'boolean':
+      return `${agg.trueCount} yes / ${agg.falseCount} no`
+    case 'enum':
+    case 'tags': {
+      const entries = Object.entries(agg.counts)
+      return entries.length > 0 ? entries.map(([k, v]) => `${k}: ${v}`).join(', ') : 'no answers'
+    }
+    case 'text':
+      return `${agg.count} response${agg.count === 1 ? '' : 's'}`
+  }
+}

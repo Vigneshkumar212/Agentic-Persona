@@ -3,9 +3,15 @@ import type {
   Api,
   ApiKeyStatus,
   CreateProjectInput,
+  CreateTrialInput,
+  Feedback,
   FeedbackSchema,
+  PickAndAddDocumentsResult,
   Persona,
-  Project
+  Project,
+  Trial,
+  TrialDocument,
+  TrialSummary
 } from '../../shared/types'
 import type { BudgetCheckResult } from '../../shared/cost'
 
@@ -54,6 +60,25 @@ const api: Api = {
   feedbackSchema: {
     draft: (projectId: string, instructions: string): Promise<FeedbackSchema> =>
       ipcRenderer.invoke('feedback-schema:draft', projectId, instructions)
+  },
+  trials: {
+    list: (projectId: string): Promise<Trial[]> => ipcRenderer.invoke('trials:list', projectId),
+    get: (id: string): Promise<Trial | null> => ipcRenderer.invoke('trials:get', id),
+    create: (input: CreateTrialInput): Promise<Trial> => ipcRenderer.invoke('trials:create', input),
+    setFeedbackSchema: (id: string, schema: FeedbackSchema): Promise<void> =>
+      ipcRenderer.invoke('trials:set-feedback-schema', id, schema),
+    pickAndAddDocuments: (trialId: string): Promise<PickAndAddDocumentsResult> =>
+      ipcRenderer.invoke('trials:pick-and-add-documents', trialId),
+    listDocuments: (trialId: string): Promise<TrialDocument[]> =>
+      ipcRenderer.invoke('trials:list-documents', trialId),
+    removeDocument: (id: string): Promise<void> => ipcRenderer.invoke('trials:remove-document', id),
+    collectFeedback: (trialId: string, personaId: string, extraInstructions?: string): Promise<Feedback> =>
+      ipcRenderer.invoke('trials:collect-feedback', trialId, personaId, extraInstructions),
+    listFeedback: (trialId: string): Promise<Feedback[]> => ipcRenderer.invoke('trials:list-feedback', trialId),
+    generateSummary: (trialId: string): Promise<TrialSummary> =>
+      ipcRenderer.invoke('trials:generate-summary', trialId),
+    exportMarkdown: (trialId: string): Promise<string | null> =>
+      ipcRenderer.invoke('trials:export-markdown', trialId)
   }
 }
 
