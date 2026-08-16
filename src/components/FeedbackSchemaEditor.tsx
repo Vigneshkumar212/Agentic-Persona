@@ -50,7 +50,7 @@ export default function FeedbackSchemaEditor({
   return (
     <div className="schema-editor">
       {schema.fields.map((field, i) => (
-        <div key={i} className="card schema-field-row">
+        <div key={i} className="schema-field-row">
           <div className="button-row" style={{ flexWrap: 'wrap' }}>
             <input
               value={field.label}

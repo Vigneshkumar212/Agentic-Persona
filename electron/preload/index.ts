@@ -7,7 +7,6 @@ import type {
   Persona,
   Project
 } from '../../shared/types'
-import type { ModelInfo } from '../../shared/models'
 import type { BudgetCheckResult } from '../../shared/cost'
 
 /**
@@ -22,12 +21,15 @@ const api: Api = {
     ping: () => ipcRenderer.invoke('app:ping')
   },
   settings: {
-    getApiKeyStatus: (): Promise<ApiKeyStatus> => ipcRenderer.invoke('settings:get-api-key-status'),
-    setApiKey: (apiKey: string) => ipcRenderer.invoke('settings:set-api-key', apiKey),
-    clearApiKey: () => ipcRenderer.invoke('settings:clear-api-key'),
+    getKeyStatus: (): Promise<Record<string, ApiKeyStatus>> => ipcRenderer.invoke('settings:get-key-status'),
+    hasAnyApiKey: (): Promise<boolean> => ipcRenderer.invoke('settings:has-any-api-key'),
+    setApiKey: (providerId: string, apiKey: string) =>
+      ipcRenderer.invoke('settings:set-api-key', providerId, apiKey),
+    clearApiKey: (providerId: string) => ipcRenderer.invoke('settings:clear-api-key', providerId),
     getDefaultModel: () => ipcRenderer.invoke('settings:get-default-model'),
     setDefaultModel: (model: string) => ipcRenderer.invoke('settings:set-default-model', model),
-    getAvailableModels: (): Promise<ModelInfo[]> => ipcRenderer.invoke('settings:get-available-models')
+    hasCompletedWelcome: (): Promise<boolean> => ipcRenderer.invoke('settings:has-completed-welcome'),
+    setCompletedWelcome: (): Promise<void> => ipcRenderer.invoke('settings:set-completed-welcome')
   },
   projects: {
     list: (): Promise<Project[]> => ipcRenderer.invoke('projects:list'),
@@ -46,8 +48,8 @@ const api: Api = {
       ipcRenderer.invoke('personas:generate-panel-summary', projectId, trialId),
     getPanelSummary: (projectId: string, trialId: string | null): Promise<string | null> =>
       ipcRenderer.invoke('personas:get-panel-summary', projectId, trialId),
-    getBudgetStatus: (projectId: string): Promise<BudgetCheckResult> =>
-      ipcRenderer.invoke('personas:get-budget-status', projectId)
+    getBudgetStatus: (projectId: string, trialId: string | null): Promise<BudgetCheckResult> =>
+      ipcRenderer.invoke('personas:get-budget-status', projectId, trialId)
   },
   feedbackSchema: {
     draft: (projectId: string, instructions: string): Promise<FeedbackSchema> =>

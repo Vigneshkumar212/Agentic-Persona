@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAppStore } from '@renderer/store/useAppStore'
+import WelcomeScreen from '@renderer/routes/Welcome/WelcomeScreen'
 import SetupScreen from '@renderer/routes/Setup/SetupScreen'
 import HomeScreen from '@renderer/routes/Home/HomeScreen'
 import SettingsScreen from '@renderer/routes/Settings/SettingsScreen'
@@ -8,11 +9,11 @@ import ProjectDetailScreen from '@renderer/routes/Project/ProjectDetailScreen'
 import ProjectWizardScreen from '@renderer/routes/Project/ProjectWizardScreen'
 
 export default function App(): JSX.Element {
-  const { apiKeyStatus, loading, refreshApiKeyStatus } = useAppStore()
+  const { hasCompletedWelcome, hasAnyKey, loading, refresh } = useAppStore()
 
   useEffect(() => {
-    refreshApiKeyStatus()
-  }, [refreshApiKeyStatus])
+    refresh()
+  }, [refresh])
 
   if (loading) {
     return (
@@ -22,24 +23,30 @@ export default function App(): JSX.Element {
     )
   }
 
-  const hasKey = apiKeyStatus?.hasKey ?? false
+  if (!hasCompletedWelcome) {
+    return (
+      <Routes>
+        <Route path="/welcome" element={<WelcomeScreen />} />
+        <Route path="*" element={<Navigate to="/welcome" replace />} />
+      </Routes>
+    )
+  }
+
+  if (!hasAnyKey) {
+    return (
+      <Routes>
+        <Route path="/setup" element={<SetupScreen />} />
+        <Route path="*" element={<Navigate to="/setup" replace />} />
+      </Routes>
+    )
+  }
 
   return (
     <Routes>
-      <Route path="/setup" element={<SetupScreen />} />
-      <Route path="/" element={hasKey ? <HomeScreen /> : <Navigate to="/setup" replace />} />
-      <Route
-        path="/settings"
-        element={hasKey ? <SettingsScreen /> : <Navigate to="/setup" replace />}
-      />
-      <Route
-        path="/project/new"
-        element={hasKey ? <ProjectWizardScreen /> : <Navigate to="/setup" replace />}
-      />
-      <Route
-        path="/project/:projectId"
-        element={hasKey ? <ProjectDetailScreen /> : <Navigate to="/setup" replace />}
-      />
+      <Route path="/" element={<HomeScreen />} />
+      <Route path="/settings" element={<SettingsScreen />} />
+      <Route path="/project/new" element={<ProjectWizardScreen />} />
+      <Route path="/project/:projectId" element={<ProjectDetailScreen />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

@@ -5,7 +5,19 @@ import { runCooldown } from '@renderer/lib/cooldown'
 
 type RunMode = 'oneByOne' | 'allAtOnce'
 
-export default function PersonaPanelSection({ project }: { project: Project }): JSX.Element {
+interface PersonaPanelSectionProps {
+  project: Project
+  /** null = the project's shared panel; a trial id = that trial's own fresh panel. */
+  trialId?: string | null
+  /** Notified whenever the persona list changes, so a parent (e.g. a trial workspace) can react. */
+  onPersonasChanged?: (personas: Persona[]) => void
+}
+
+export default function PersonaPanelSection({
+  project,
+  trialId = null,
+  onPersonasChanged
+}: PersonaPanelSectionProps): JSX.Element {
   const [personas, setPersonas] = useState<Persona[] | null>(null)
   const [runMode, setRunMode] = useState<RunMode>('oneByOne')
   const [generating, setGenerating] = useState(false)
@@ -17,28 +29,33 @@ export default function PersonaPanelSection({ project }: { project: Project }): 
 
   async function load(): Promise<void> {
     const [list, sum] = await Promise.all([
-      window.api.personas.list(project.id, null),
-      window.api.personas.getPanelSummary(project.id, null)
+      window.api.personas.list(project.id, trialId),
+      window.api.personas.getPanelSummary(project.id, trialId)
     ])
     setPersonas(list)
     setSummary(sum)
+    onPersonasChanged?.(list)
   }
 
   useEffect(() => {
     load()
-  }, [project.id])
+  }, [project.id, trialId])
 
   async function generateOne(): Promise<boolean> {
-    const budget = await window.api.personas.getBudgetStatus(project.id)
+    const budget = await window.api.personas.getBudgetStatus(project.id, trialId)
     if (!budget.withinBudget) {
       setError(
-        `Project budget exceeded (${budget.usedTokens.toLocaleString()} / ${budget.budgetTokens.toLocaleString()} tokens used). Raise the budget to generate more.`
+        `Budget exceeded (${budget.usedTokens.toLocaleString()} / ${budget.budgetTokens.toLocaleString()} tokens used). Raise the budget to generate more.`
       )
       return false
     }
     try {
-      const persona = await window.api.personas.generateNext(project.id, null)
-      setPersonas((prev) => [...(prev ?? []), persona])
+      const persona = await window.api.personas.generateNext(project.id, trialId)
+      setPersonas((prev) => {
+        const next = [...(prev ?? []), persona]
+        onPersonasChanged?.(next)
+        return next
+      })
       return true
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -85,7 +102,7 @@ export default function PersonaPanelSection({ project }: { project: Project }): 
     setSummarizing(true)
     setError(null)
     try {
-      const text = await window.api.personas.generatePanelSummary(project.id, null)
+      const text = await window.api.personas.generatePanelSummary(project.id, trialId)
       setSummary(text)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -96,7 +113,7 @@ export default function PersonaPanelSection({ project }: { project: Project }): 
 
   if (personas === null) {
     return (
-      <section className="card" style={{ marginTop: 16 }}>
+      <section className="detail-section">
         <h2>Persona panel</h2>
         <p className="muted">Loading…</p>
       </section>
@@ -106,7 +123,7 @@ export default function PersonaPanelSection({ project }: { project: Project }): 
   const remaining = project.personaCount - personas.length
 
   return (
-    <section className="card" style={{ marginTop: 16 }}>
+    <section className="detail-section">
       <h2>Persona panel</h2>
 
       {personas.length > 0 && (
@@ -180,7 +197,7 @@ export default function PersonaPanelSection({ project }: { project: Project }): 
       {personas.length > 0 && (
         <div style={{ marginTop: 16 }}>
           {summary ? (
-            <div className="card">
+            <div className="callout">
               <h3>Panel summary</h3>
               <p>{summary}</p>
             </div>

@@ -58,7 +58,7 @@ export default function FeedbackSchemaSection({
 
   if (editing && draftSchema) {
     return (
-      <section className="card" style={{ marginTop: 16 }}>
+      <section className="detail-section">
         <h2>Feedback schema</h2>
         <FeedbackSchemaEditor schema={draftSchema} onChange={setDraftSchema} disabled={saving} />
         {error && <p className="error">{error}</p>}
@@ -78,7 +78,7 @@ export default function FeedbackSchemaSection({
   }
 
   return (
-    <section className="card" style={{ marginTop: 16 }}>
+    <section className="detail-section">
       <h2>Feedback schema</h2>
       {savedSchema ? (
         <>

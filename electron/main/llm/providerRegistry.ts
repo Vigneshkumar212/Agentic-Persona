@@ -1,36 +1,46 @@
 import { GeminiProvider } from './GeminiProvider'
 import type { LLMProvider } from './LLMProvider'
-import { loadApiKey } from '../secrets'
+import { loadApiKeys } from '../secrets'
 
 /**
- * Holds the single active LLMProvider instance for the app's lifetime.
- * Rebuilt whenever the API key changes. Everything downstream (persona
- * generation, feedback, chat) should call getProvider() rather than
- * constructing a client itself.
+ * Holds one active LLMProvider instance per provider id for the app's
+ * lifetime, rebuilt whenever a key changes. Only 'gemini' actually builds
+ * an instance today — buildProvider() is the single place a real
+ * Anthropic/OpenAI provider gets plugged in later.
  */
 
-let provider: LLMProvider | null = null
+const providers = new Map<string, LLMProvider>()
 
-export function initProviderFromStoredKey(): void {
-  const apiKey = loadApiKey()
-  provider = apiKey ? new GeminiProvider(apiKey) : null
+function buildProvider(providerId: string, apiKey: string): LLMProvider | null {
+  if (providerId === 'gemini') return new GeminiProvider(apiKey)
+  return null
 }
 
-export function setProviderApiKey(apiKey: string): void {
-  provider = new GeminiProvider(apiKey)
+export function initProvidersFromStoredKeys(): void {
+  providers.clear()
+  for (const [providerId, apiKey] of Object.entries(loadApiKeys())) {
+    const instance = buildProvider(providerId, apiKey)
+    if (instance) providers.set(providerId, instance)
+  }
 }
 
-export function clearProvider(): void {
-  provider = null
+export function setActiveProviderKey(providerId: string, apiKey: string): void {
+  const instance = buildProvider(providerId, apiKey)
+  if (instance) providers.set(providerId, instance)
 }
 
-export function getProvider(): LLMProvider {
+export function clearActiveProviderKey(providerId: string): void {
+  providers.delete(providerId)
+}
+
+export function getProvider(providerId: string): LLMProvider {
+  const provider = providers.get(providerId)
   if (!provider) {
-    throw new Error('No API key configured yet. Complete setup before making a request.')
+    throw new Error(`No API key configured for "${providerId}". Add one in Settings.`)
   }
   return provider
 }
 
-export function hasProvider(): boolean {
-  return provider !== null
+export function hasAnyProvider(): boolean {
+  return providers.size > 0
 }

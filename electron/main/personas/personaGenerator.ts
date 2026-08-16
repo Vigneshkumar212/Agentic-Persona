@@ -2,7 +2,7 @@ import type { PersonaRecord, Persona, Project } from '../../../shared/types'
 import { checkBudget } from '../../../shared/cost'
 import { getProject } from '../db/projectsRepo'
 import { createPersona, listPersonas } from '../db/personasRepo'
-import { getProjectUsageTotal, logUsage } from '../db/usageRepo'
+import { getUsageTotal, logUsage } from '../db/usageRepo'
 import { getProvider } from '../llm/providerRegistry'
 import { PERSONA_RESPONSE_SCHEMA } from '../llm/personaSchema'
 
@@ -52,7 +52,7 @@ function buildPersonaPrompt(project: Project, priorSummaries: string[], index: n
 export class BudgetExceededError extends Error {
   constructor(usedTokens: number, budgetTokens: number) {
     super(
-      `Project token budget exceeded (${usedTokens.toLocaleString()} / ${budgetTokens.toLocaleString()} tokens used).`
+      `Per-trial token budget exceeded (${usedTokens.toLocaleString()} / ${budgetTokens.toLocaleString()} tokens used).`
     )
     this.name = 'BudgetExceededError'
   }
@@ -62,7 +62,7 @@ export async function generateNextPersona(projectId: string, trialId: string | n
   const project = getProject(projectId)
   if (!project) throw new Error('Project not found.')
 
-  const usedTokens = getProjectUsageTotal(projectId)
+  const usedTokens = getUsageTotal(projectId, trialId)
   const budget = checkBudget(usedTokens, project.budgetTokens)
   if (!budget.withinBudget) {
     throw new BudgetExceededError(usedTokens, project.budgetTokens)
@@ -72,12 +72,13 @@ export async function generateNextPersona(projectId: string, trialId: string | n
   const priorSummaries = existing.map((p) => p.oneLineSummary)
   const prompt = buildPersonaPrompt(project, priorSummaries, existing.length)
 
-  const provider = getProvider()
+  const provider = getProvider(project.provider)
   const result = await provider.generateStructured<PersonaRecord>({
     model: project.model,
     systemInstruction: SYSTEM_INSTRUCTION,
     input: prompt,
-    responseSchema: PERSONA_RESPONSE_SCHEMA
+    responseSchema: PERSONA_RESPONSE_SCHEMA,
+    maxOutputTokens: project.maxOutputTokens || undefined
   })
 
   logUsage(projectId, trialId, 'persona_generation', project.model, result.usage)

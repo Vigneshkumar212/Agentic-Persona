@@ -6,7 +6,7 @@ export default function PersonaCard({ persona }: { persona: Persona }): JSX.Elem
   const p = persona.persona
 
   return (
-    <div className="card persona-card">
+    <div className="persona-card">
       <h3>{p.name}</h3>
       <p className="muted small">
         {p.age} · {p.country} · {p.occupation}

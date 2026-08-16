@@ -1,7 +1,7 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
 import { initDatabase } from './db/database'
-import { initProviderFromStoredKey } from './llm/providerRegistry'
+import { initProvidersFromStoredKeys } from './llm/providerRegistry'
 import { registerAppIpc } from './ipc/app'
 import { registerSettingsIpc } from './ipc/settings'
 import { registerProjectsIpc } from './ipc/projects'
@@ -59,7 +59,7 @@ function registerIpcHandlers(): void {
 
 app.whenReady().then(() => {
   initDatabase()
-  initProviderFromStoredKey()
+  initProvidersFromStoredKeys()
   registerIpcHandlers()
 
   createMainWindow()

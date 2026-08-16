@@ -18,7 +18,7 @@ export async function generatePanelSummary(projectId: string, trialId: string | 
       'it covers, and any notable gaps in coverage. Plain text, no markdown headers or bullet points.'
   ].join('\n\n')
 
-  const provider = getProvider()
+  const provider = getProvider(project.provider)
   const result = await provider.generateText({ model: project.model, input: prompt })
 
   logUsage(projectId, trialId, 'panel_summary', project.model, result.usage)

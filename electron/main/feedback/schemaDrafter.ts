@@ -55,7 +55,7 @@ export async function draftFeedbackSchema(projectId: string, instructions: strin
   const project = getProject(projectId)
   if (!project) throw new Error('Project not found.')
 
-  const provider = getProvider()
+  const provider = getProvider(project.provider)
   const result = await provider.generateStructured<{ fields: FeedbackFieldDraft[] }>({
     model: project.model,
     systemInstruction: SYSTEM_INSTRUCTION,

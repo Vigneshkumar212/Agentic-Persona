@@ -33,6 +33,8 @@ export interface GenerateOptions {
   systemInstruction?: string
   /** Plain text prompt, or an ordered list of multimodal parts. */
   input: string | MultimodalPart[]
+  /** Caps this call's response length. Omit/0 for the model's default. */
+  maxOutputTokens?: number
 }
 
 export interface StructuredGenerateOptions extends GenerateOptions {

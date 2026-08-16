@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import { checkBudget } from '../../../shared/cost'
 import { getProject } from '../db/projectsRepo'
 import { getPanelSummary, listPersonas } from '../db/personasRepo'
-import { getProjectUsageTotal } from '../db/usageRepo'
+import { getUsageTotal } from '../db/usageRepo'
 import { generateNextPersona } from '../personas/personaGenerator'
 import { generatePanelSummary } from '../personas/panelSummary'
 
@@ -23,10 +23,10 @@ export function registerPersonasIpc(): void {
     getPanelSummary(projectId, trialId)
   )
 
-  ipcMain.handle('personas:get-budget-status', (_e, projectId: string) => {
+  ipcMain.handle('personas:get-budget-status', (_e, projectId: string, trialId: string | null) => {
     const project = getProject(projectId)
     if (!project) throw new Error('Project not found.')
-    const used = getProjectUsageTotal(projectId)
+    const used = getUsageTotal(projectId, trialId)
     return checkBudget(used, project.budgetTokens)
   })
 }

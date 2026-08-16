@@ -17,8 +17,10 @@ CREATE TABLE IF NOT EXISTS projects (
   default_countries         TEXT NOT NULL DEFAULT '[]', -- JSON string[]
   default_languages         TEXT NOT NULL DEFAULT '[]', -- JSON string[]
   default_audience          TEXT NOT NULL DEFAULT '',
+  provider                  TEXT NOT NULL DEFAULT 'gemini',
   model                     TEXT NOT NULL,
-  budget_tokens             INTEGER NOT NULL DEFAULT 0,
+  max_output_tokens         INTEGER NOT NULL DEFAULT 0, -- caps each generation call's response length; 0 = model default
+  budget_tokens             INTEGER NOT NULL DEFAULT 0, -- cumulative budget, tracked per trial; 0 = unlimited
   chat_token_limit          INTEGER NOT NULL DEFAULT 0,
   cooldown_seconds          INTEGER NOT NULL DEFAULT 2,
   default_feedback_schema   TEXT, -- JSON FeedbackSchema, nullable until drafted
@@ -62,6 +64,7 @@ CREATE TABLE IF NOT EXISTS feedback (
   id            TEXT PRIMARY KEY,
   trial_id      TEXT NOT NULL REFERENCES trials(id) ON DELETE CASCADE,
   persona_id    TEXT NOT NULL REFERENCES personas(id) ON DELETE CASCADE,
+  round         INTEGER NOT NULL DEFAULT 1, -- follow-up passes increment this
   structured_json TEXT NOT NULL DEFAULT '{}',
   freeform_text TEXT NOT NULL DEFAULT '',
   created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),

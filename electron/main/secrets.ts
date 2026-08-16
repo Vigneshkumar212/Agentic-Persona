@@ -1,48 +1,61 @@
 import { app, safeStorage } from 'electron'
-import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 /**
  * Encrypted-at-rest API key storage using Electron's safeStorage (OS
  * keychain: DPAPI on Windows, Keychain on macOS, libsecret on Linux).
  *
- * The key is written to a file as an opaque encrypted blob, never as
- * plaintext, and is only ever read back inside the main process. The
- * renderer never sees it.
+ * Keys for every provider are stored together as one encrypted JSON blob
+ * (never plaintext), keyed by provider id (see shared/providers.ts). Only
+ * ever read back inside the main process — the renderer never sees them.
  */
 
-const KEY_FILENAME = 'gemini.key.enc'
+const KEYS_FILENAME = 'api-keys.enc'
 
-function keyFilePath(): string {
+export type StoredKeys = Record<string, string>
+
+function keysFilePath(): string {
   const dir = app.getPath('userData')
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
-  return join(dir, KEY_FILENAME)
+  return join(dir, KEYS_FILENAME)
 }
 
-export function hasApiKey(): boolean {
-  return existsSync(keyFilePath())
+export function loadApiKeys(): StoredKeys {
+  const path = keysFilePath()
+  if (!existsSync(path)) return {}
+  try {
+    const encrypted = readFileSync(path)
+    return JSON.parse(safeStorage.decryptString(encrypted)) as StoredKeys
+  } catch {
+    return {}
+  }
 }
 
-export function saveApiKey(apiKey: string): void {
+function saveApiKeys(keys: StoredKeys): void {
   if (!safeStorage.isEncryptionAvailable()) {
     throw new Error(
-      'OS-level secure storage is not available on this machine, so the API key cannot be stored safely.'
+      'OS-level secure storage is not available on this machine, so API keys cannot be stored safely.'
     )
   }
-  const encrypted = safeStorage.encryptString(apiKey)
-  writeFileSync(keyFilePath(), encrypted)
+  const encrypted = safeStorage.encryptString(JSON.stringify(keys))
+  writeFileSync(keysFilePath(), encrypted)
 }
 
-export function loadApiKey(): string | null {
-  const path = keyFilePath()
-  if (!existsSync(path)) return null
-  const encrypted = readFileSync(path)
-  return safeStorage.decryptString(encrypted)
+export function setProviderKey(providerId: string, apiKey: string): void {
+  const keys = loadApiKeys()
+  keys[providerId] = apiKey
+  saveApiKeys(keys)
 }
 
-export function clearApiKey(): void {
-  const path = keyFilePath()
-  if (existsSync(path)) unlinkSync(path)
+export function clearProviderKey(providerId: string): void {
+  const keys = loadApiKeys()
+  delete keys[providerId]
+  saveApiKeys(keys)
+}
+
+export function hasAnyApiKey(): boolean {
+  return Object.keys(loadApiKeys()).length > 0
 }
 
 export function maskApiKey(apiKey: string): string {

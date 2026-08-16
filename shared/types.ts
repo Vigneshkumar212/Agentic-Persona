@@ -21,7 +21,12 @@ export interface Project {
   defaultCountries: string[] // empty = "any"
   defaultLanguages: string[] // empty = "any"
   defaultAudience: string
+  /** LLM provider id, e.g. 'gemini' — see shared/providers.ts. Only 'gemini' is wired up in v1. */
+  provider: string
   model: string
+  /** Caps each individual generation call's response length (Gemini's maxOutputTokens). 0 = model default. */
+  maxOutputTokens: number
+  /** Cumulative token budget, tracked per trial (see usage_log). 0 = unlimited. */
   budgetTokens: number
   chatTokenLimit: number
   cooldownSeconds: number
@@ -53,13 +58,18 @@ export interface Persona {
   createdAt: string
 }
 
+export interface TrialSummary {
+  narrative: string
+  generatedAt: string
+}
+
 export interface Trial {
   id: string
   projectId: string
   name: string
   explanation: string
   feedbackSchema: FeedbackSchema | null
-  summary: unknown | null
+  summary: TrialSummary | null
   createdAt: string
   status: 'draft' | 'running' | 'complete'
 }
@@ -74,16 +84,32 @@ export interface TrialDocument {
   storedPath: string
 }
 
+/** Matches the type of the FeedbackField it answers: rating->number, enum->string, boolean->boolean, tags->string[], text->string. */
+export type FeedbackFieldValue = number | string | boolean | string[]
+
 export interface Feedback {
   id: string
   trialId: string
   personaId: string
-  structured: Record<string, unknown>
+  /** Increments with each follow-up re-run; results views show the latest round. */
+  round: number
+  structured: Record<string, FeedbackFieldValue>
   freeformText: string
   createdAt: string
   tokensIn: number
   tokensOut: number
 }
+
+// ---------------------------------------------------------------------------
+// Trial results aggregation (pure client-side math — see shared/aggregate.ts)
+// ---------------------------------------------------------------------------
+
+export type FieldAggregate =
+  | { type: 'rating'; average: number; min: number; max: number; count: number }
+  | { type: 'enum'; counts: Record<string, number>; total: number }
+  | { type: 'boolean'; trueCount: number; falseCount: number }
+  | { type: 'tags'; counts: Record<string, number>; total: number }
+  | { type: 'text'; count: number }
 
 export interface Chat {
   id: string
@@ -170,13 +196,16 @@ export interface AppApi {
 }
 
 export interface SettingsApi {
-  getApiKeyStatus(): Promise<ApiKeyStatus>
-  /** Validates the key against the Gemini API before persisting it. */
-  setApiKey(apiKey: string): Promise<{ ok: true } | { ok: false; error: string }>
-  clearApiKey(): Promise<void>
+  /** Key status for every provider in shared/providers.ts, keyed by provider id. */
+  getKeyStatus(): Promise<Record<string, ApiKeyStatus>>
+  hasAnyApiKey(): Promise<boolean>
+  /** Validates the key against the provider's API before persisting it. */
+  setApiKey(providerId: string, apiKey: string): Promise<{ ok: true } | { ok: false; error: string }>
+  clearApiKey(providerId: string): Promise<void>
   getDefaultModel(): Promise<string>
   setDefaultModel(model: string): Promise<void>
-  getAvailableModels(): Promise<import('./models').ModelInfo[]>
+  hasCompletedWelcome(): Promise<boolean>
+  setCompletedWelcome(): Promise<void>
 }
 
 // ---------------------------------------------------------------------------
@@ -193,7 +222,9 @@ export interface CreateProjectInput {
   defaultCountries?: string[]
   defaultLanguages?: string[]
   defaultAudience?: string
+  provider?: string
   model: string
+  maxOutputTokens?: number
   budgetTokens?: number
   chatTokenLimit?: number
   cooldownSeconds?: number
@@ -226,7 +257,7 @@ export interface PersonasApi {
   generateNext(projectId: string, trialId: string | null): Promise<Persona>
   generatePanelSummary(projectId: string, trialId: string | null): Promise<string>
   getPanelSummary(projectId: string, trialId: string | null): Promise<string | null>
-  getBudgetStatus(projectId: string): Promise<import('./cost').BudgetCheckResult>
+  getBudgetStatus(projectId: string, trialId: string | null): Promise<import('./cost').BudgetCheckResult>
 }
 
 export interface Api {

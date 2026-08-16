@@ -1,15 +1,13 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '@renderer/store/useAppStore'
+import { PROVIDERS, DEFAULT_PROVIDER } from '@shared/providers'
 import ModelSelect from '@renderer/components/ModelSelect'
+import ProviderKeyManager from '@renderer/components/ProviderKeyManager'
 
 export default function SettingsScreen(): JSX.Element {
-  const { apiKeyStatus, refreshApiKeyStatus } = useAppStore()
+  const { keyStatus, refresh } = useAppStore()
   const [model, setModel] = useState('')
-  const [newKey, setNewKey] = useState('')
-  const [showKeyForm, setShowKeyForm] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -21,33 +19,6 @@ export default function SettingsScreen(): JSX.Element {
     await window.api.settings.setDefaultModel(next)
   }
 
-  async function handleKeyUpdate(e: FormEvent): Promise<void> {
-    e.preventDefault()
-    setSubmitting(true)
-    setError(null)
-
-    const result = await window.api.settings.setApiKey(newKey)
-    setSubmitting(false)
-
-    if (!result.ok) {
-      setError(result.error)
-      return
-    }
-
-    setNewKey('')
-    setShowKeyForm(false)
-    await refreshApiKeyStatus()
-  }
-
-  async function handleRemoveKey(): Promise<void> {
-    if (!confirm('Remove your saved API key? You will need to re-enter it to use the app again.')) {
-      return
-    }
-    await window.api.settings.clearApiKey()
-    await refreshApiKeyStatus()
-    navigate('/setup', { replace: true })
-  }
-
   return (
     <div className="screen">
       <header className="page-header">
@@ -57,58 +28,28 @@ export default function SettingsScreen(): JSX.Element {
         </button>
       </header>
 
-      <div className="card" style={{ maxWidth: 480 }}>
-        <h2>API key</h2>
-        <p className="muted small">Current key: {apiKeyStatus?.maskedKey ?? 'none'}</p>
-
-        {!showKeyForm ? (
-          <div className="button-row">
-            <button className="btn-secondary" onClick={() => setShowKeyForm(true)}>
-              Change key
-            </button>
-            <button className="btn-danger" onClick={handleRemoveKey}>
-              Remove key
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleKeyUpdate}>
-            <label htmlFor="newKey">New Gemini API key</label>
-            <input
-              id="newKey"
-              type="password"
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="AIza..."
-              value={newKey}
-              onChange={(e) => setNewKey(e.target.value)}
-              disabled={submitting}
+      <section style={{ maxWidth: 480 }}>
+        <h2>API keys</h2>
+        <div className="provider-key-list">
+          {PROVIDERS.map((p) => (
+            <ProviderKeyManager
+              key={p.id}
+              providerId={p.id}
+              label={p.label}
+              available={p.available}
+              status={keyStatus?.[p.id]}
+              onChanged={refresh}
+              helpUrl={p.id === 'gemini' ? 'https://aistudio.google.com/apikey' : undefined}
             />
-            {error && <p className="error">{error}</p>}
-            <div className="button-row">
-              <button type="submit" disabled={submitting || newKey.trim().length === 0}>
-                {submitting ? 'Validating…' : 'Save key'}
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  setShowKeyForm(false)
-                  setError(null)
-                  setNewKey('')
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
+          ))}
+        </div>
+      </section>
 
-      <div className="card" style={{ maxWidth: 480, marginTop: 16 }}>
+      <section style={{ maxWidth: 480, marginTop: 24 }}>
         <h2>Default model</h2>
-        <p className="muted small">Used for new projects unless overridden in the project wizard.</p>
-        <ModelSelect value={model} onChange={handleModelChange} />
-      </div>
+        <p className="muted small">Used to prefill new projects unless changed in the project wizard.</p>
+        <ModelSelect provider={DEFAULT_PROVIDER} value={model} onChange={handleModelChange} />
+      </section>
     </div>
   )
 }

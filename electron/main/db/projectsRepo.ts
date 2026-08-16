@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { getDb } from './database'
 import type { CreateProjectInput, FeedbackSchema, PersonaMode, Project } from '../../../shared/types'
 import { DEFAULT_MODEL } from '../../../shared/models'
+import { DEFAULT_PROVIDER } from '../../../shared/providers'
 
 interface ProjectRow {
   id: string
@@ -14,7 +15,9 @@ interface ProjectRow {
   default_countries: string
   default_languages: string
   default_audience: string
+  provider: string
   model: string
+  max_output_tokens: number
   budget_tokens: number
   chat_token_limit: number
   cooldown_seconds: number
@@ -35,7 +38,9 @@ function rowToProject(row: ProjectRow): Project {
     defaultCountries: JSON.parse(row.default_countries),
     defaultLanguages: JSON.parse(row.default_languages),
     defaultAudience: row.default_audience,
+    provider: row.provider,
     model: row.model,
+    maxOutputTokens: row.max_output_tokens,
     budgetTokens: row.budget_tokens,
     chatTokenLimit: row.chat_token_limit,
     cooldownSeconds: row.cooldown_seconds,
@@ -66,11 +71,13 @@ export function createProject(input: CreateProjectInput): Project {
       `INSERT INTO projects (
         id, name, description, persona_mode, persona_count, variance,
         generation_instructions, default_countries, default_languages,
-        default_audience, model, budget_tokens, chat_token_limit, cooldown_seconds
+        default_audience, provider, model, max_output_tokens, budget_tokens,
+        chat_token_limit, cooldown_seconds
       ) VALUES (
         @id, @name, @description, @personaMode, @personaCount, @variance,
         @generationInstructions, @defaultCountries, @defaultLanguages,
-        @defaultAudience, @model, @budgetTokens, @chatTokenLimit, @cooldownSeconds
+        @defaultAudience, @provider, @model, @maxOutputTokens, @budgetTokens,
+        @chatTokenLimit, @cooldownSeconds
       )`
     )
     .run({
@@ -84,7 +91,9 @@ export function createProject(input: CreateProjectInput): Project {
       defaultCountries: JSON.stringify(input.defaultCountries ?? []),
       defaultLanguages: JSON.stringify(input.defaultLanguages ?? []),
       defaultAudience: input.defaultAudience ?? '',
+      provider: input.provider || DEFAULT_PROVIDER,
       model: input.model || DEFAULT_MODEL,
+      maxOutputTokens: input.maxOutputTokens ?? 0,
       budgetTokens: input.budgetTokens ?? 0,
       chatTokenLimit: input.chatTokenLimit ?? 0,
       cooldownSeconds: input.cooldownSeconds ?? 2

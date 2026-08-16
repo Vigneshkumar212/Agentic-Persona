@@ -19,9 +19,18 @@ export function logUsage(
     .run(randomUUID(), projectId, trialId, operation, model, usage.inputTokens, usage.outputTokens, cost)
 }
 
-export function getProjectUsageTotal(projectId: string): number {
+/**
+ * Usage — and therefore budget — is scoped per (project, trial), not per
+ * project lifetime. `trialId: null` is its own bucket: the initial
+ * project-level persona panel (generated before any trial exists). Each
+ * trial gets its own independent bucket, each capped at the same
+ * project.budgetTokens ceiling.
+ */
+export function getUsageTotal(projectId: string, trialId: string | null): number {
   const row = getDb()
-    .prepare('SELECT COALESCE(SUM(tokens_in + tokens_out), 0) as total FROM usage_log WHERE project_id = ?')
-    .get(projectId) as { total: number }
+    .prepare(
+      'SELECT COALESCE(SUM(tokens_in + tokens_out), 0) as total FROM usage_log WHERE project_id = ? AND trial_id IS ?'
+    )
+    .get(projectId, trialId) as { total: number }
   return row.total
 }

@@ -2,9 +2,11 @@ import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { PersonaMode } from '@shared/types'
 import { buildCostEstimate, estimatePersonaGenerationTokens } from '@shared/cost'
-import { DEFAULT_MODEL } from '@shared/models'
+import { DEFAULT_MODEL, MODELS_BY_PROVIDER } from '@shared/models'
+import { DEFAULT_PROVIDER } from '@shared/providers'
 import { COMMON_COUNTRIES, COMMON_LANGUAGES } from '@shared/locales'
 import ModelSelect from '@renderer/components/ModelSelect'
+import ProviderSelect from '@renderer/components/ProviderSelect'
 import MultiSelectTags from '@renderer/components/MultiSelectTags'
 
 export default function ProjectWizardScreen(): JSX.Element {
@@ -19,7 +21,9 @@ export default function ProjectWizardScreen(): JSX.Element {
   const [countries, setCountries] = useState<string[]>([])
   const [languages, setLanguages] = useState<string[]>([])
   const [audience, setAudience] = useState('')
+  const [provider, setProvider] = useState(DEFAULT_PROVIDER)
   const [model, setModel] = useState(DEFAULT_MODEL)
+  const [maxOutputTokens, setMaxOutputTokens] = useState(0)
   const [budgetTokens, setBudgetTokens] = useState(0)
   const [chatTokenLimit, setChatTokenLimit] = useState(0)
   const [cooldownSeconds, setCooldownSeconds] = useState(2)
@@ -30,16 +34,42 @@ export default function ProjectWizardScreen(): JSX.Element {
     window.api.settings.getDefaultModel().then(setModel)
   }, [])
 
+  useEffect(() => {
+    const models = MODELS_BY_PROVIDER[provider] ?? []
+    if (!models.some((m) => m.id === model)) {
+      setModel(models[0]?.id ?? '')
+    }
+    // Deliberately only depends on `provider` — switching providers should
+    // reset to a valid model for it, but the model itself shouldn't re-trigger this.
+  }, [provider])
+
   const estimate = useMemo(() => {
-    const { inputTokens, outputTokens } = estimatePersonaGenerationTokens(personaCount)
+    // maxOutputTokens (when set) caps each persona's response, so it becomes
+    // the per-persona output estimate directly — this is what makes the
+    // sidebar reactive to that field rather than a fixed guess.
+    const { inputTokens, outputTokens } = estimatePersonaGenerationTokens(
+      personaCount,
+      undefined,
+      undefined,
+      maxOutputTokens || undefined
+    )
     return buildCostEstimate(model, inputTokens, outputTokens)
-  }, [personaCount, model])
+  }, [personaCount, model, maxOutputTokens])
 
   const estimatedTotalTokens = estimate.estimatedInputTokens + estimate.estimatedOutputTokens
   const overBudget = budgetTokens > 0 && estimatedTotalTokens > budgetTokens
 
   async function handleSubmit(e: FormEvent): Promise<void> {
     e.preventDefault()
+
+    if (overBudget) {
+      const proceed = confirm(
+        `Generating this panel is estimated at ~${estimatedTotalTokens.toLocaleString()} tokens, which ` +
+          `exceeds your ${budgetTokens.toLocaleString()}-token per-trial budget. Create the project anyway?`
+      )
+      if (!proceed) return
+    }
+
     setSubmitting(true)
     setError(null)
 
@@ -54,7 +84,9 @@ export default function ProjectWizardScreen(): JSX.Element {
         defaultCountries: countries,
         defaultLanguages: languages,
         defaultAudience: audience,
+        provider,
         model,
+        maxOutputTokens,
         budgetTokens,
         chatTokenLimit,
         cooldownSeconds
@@ -76,7 +108,7 @@ export default function ProjectWizardScreen(): JSX.Element {
       </header>
 
       <div className="wizard-layout">
-        <form className="card wizard-form" onSubmit={handleSubmit}>
+        <form className="wizard-form" onSubmit={handleSubmit}>
           <section>
             <h2>Basics</h2>
             <label htmlFor="name">Project name</label>
@@ -207,10 +239,31 @@ export default function ProjectWizardScreen(): JSX.Element {
           <section>
             <h2>Model &amp; budget</h2>
 
-            <label htmlFor="model">Model</label>
-            <ModelSelect id="model" value={model} onChange={setModel} disabled={submitting} />
+            <label htmlFor="provider">Provider</label>
+            <ProviderSelect id="provider" value={provider} onChange={setProvider} disabled={submitting} />
+            <p className="muted small">Only Gemini is wired up in v1 — more providers are coming.</p>
 
-            <label htmlFor="budget">Project token budget (0 = unlimited)</label>
+            <label htmlFor="model">Model</label>
+            <ModelSelect id="model" provider={provider} value={model} onChange={setModel} disabled={submitting} />
+
+            <label htmlFor="maxOutputTokens">Max output tokens per response (0 = model default)</label>
+            <input
+              id="maxOutputTokens"
+              type="number"
+              min={0}
+              step={50}
+              value={maxOutputTokens}
+              onChange={(e) => setMaxOutputTokens(Math.max(0, Number(e.target.value)))}
+              onWheel={(e) => e.currentTarget.blur()}
+              disabled={submitting}
+              className={overBudget ? 'input-error' : undefined}
+            />
+            <p className="muted small">
+              Caps how long each persona's individual response can be — a real generation setting, not
+              just an estimate. Lower it to reduce cost per persona.
+            </p>
+
+            <label htmlFor="budget">Budget per trial (cumulative, 0 = unlimited)</label>
             <input
               id="budget"
               type="number"
@@ -218,8 +271,14 @@ export default function ProjectWizardScreen(): JSX.Element {
               step={1000}
               value={budgetTokens}
               onChange={(e) => setBudgetTokens(Math.max(0, Number(e.target.value)))}
+              onWheel={(e) => e.currentTarget.blur()}
               disabled={submitting}
+              placeholder="e.g. 500000"
             />
+            <p className="muted small">
+              Total tokens allowed across one trial's generation (personas, feedback, and chat combined) —
+              not per response. Once a trial crosses this, further generation for it is blocked.
+            </p>
 
             <label htmlFor="chatLimit">Per-chat token limit (0 = unlimited)</label>
             <input
@@ -255,7 +314,7 @@ export default function ProjectWizardScreen(): JSX.Element {
           </button>
         </form>
 
-        <aside className="card wizard-sidebar">
+        <aside className="wizard-sidebar">
           <h2>Estimated panel cost</h2>
           <p className="muted small">Generating the initial {personaCount}-persona panel with {model}.</p>
           <dl className="detail-list">
@@ -268,13 +327,14 @@ export default function ProjectWizardScreen(): JSX.Element {
           </dl>
           {overBudget && (
             <p className="error small">
-              This exceeds your {budgetTokens.toLocaleString()}-token budget. Lower the persona count
-              or raise the budget.
+              This exceeds your {budgetTokens.toLocaleString()}-token per-trial budget. Lower the persona
+              count, lower max output tokens per response, or raise the budget. You'll be asked to
+              confirm before creating the project anyway.
             </p>
           )}
           <p className="muted small">
-            Rough estimate before any generation. Trial feedback and chat usage are billed and tracked
-            separately.
+            Estimate for generating the initial panel only. Trial feedback and chat usage are billed and
+            tracked separately, against the same per-trial budget.
           </p>
         </aside>
       </div>

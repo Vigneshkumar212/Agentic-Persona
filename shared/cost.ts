@@ -1,5 +1,5 @@
 import type { CostEstimate, ModelPricing } from './types'
-import { AVAILABLE_MODELS, DEFAULT_MODEL } from './models'
+import { MODELS_BY_PROVIDER, DEFAULT_MODEL } from './models'
 
 /**
  * Pure, network-free cost/token math shared by the main process (actual
@@ -9,11 +9,13 @@ import { AVAILABLE_MODELS, DEFAULT_MODEL } from './models'
 
 export { DEFAULT_MODEL }
 
-export const PRICE_TABLE: ModelPricing[] = AVAILABLE_MODELS.map((m) => ({
-  model: m.id,
-  inputPerMillion: m.inputPerMillion,
-  outputPerMillion: m.outputPerMillion
-}))
+export const PRICE_TABLE: ModelPricing[] = Object.values(MODELS_BY_PROVIDER)
+  .flat()
+  .map((m) => ({
+    model: m.id,
+    inputPerMillion: m.inputPerMillion,
+    outputPerMillion: m.outputPerMillion
+  }))
 
 export function getModelPricing(model: string): ModelPricing {
   return (

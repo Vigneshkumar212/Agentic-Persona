@@ -2,16 +2,24 @@ import { create } from 'zustand'
 import type { ApiKeyStatus } from '@shared/types'
 
 interface AppState {
-  apiKeyStatus: ApiKeyStatus | null
+  keyStatus: Record<string, ApiKeyStatus> | null
+  hasAnyKey: boolean
+  hasCompletedWelcome: boolean
   loading: boolean
-  refreshApiKeyStatus: () => Promise<void>
+  refresh: () => Promise<void>
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  apiKeyStatus: null,
+  keyStatus: null,
+  hasAnyKey: false,
+  hasCompletedWelcome: false,
   loading: true,
-  refreshApiKeyStatus: async () => {
-    const status = await window.api.settings.getApiKeyStatus()
-    set({ apiKeyStatus: status, loading: false })
+  refresh: async () => {
+    const [keyStatus, hasAnyKey, hasCompletedWelcome] = await Promise.all([
+      window.api.settings.getKeyStatus(),
+      window.api.settings.hasAnyApiKey(),
+      window.api.settings.hasCompletedWelcome()
+    ])
+    set({ keyStatus, hasAnyKey, hasCompletedWelcome, loading: false })
   }
 }))

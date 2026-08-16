@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAppStore } from '@renderer/store/useAppStore'
 import type { Project } from '@shared/types'
 
 export default function HomeScreen(): JSX.Element {
-  const apiKeyStatus = useAppStore((s) => s.apiKeyStatus)
   const [projects, setProjects] = useState<Project[] | null>(null)
   const navigate = useNavigate()
 
@@ -28,12 +26,9 @@ export default function HomeScreen(): JSX.Element {
     <div className="screen">
       <header className="page-header">
         <h1>Projects</h1>
-        <div className="button-row">
-          {apiKeyStatus?.hasKey && <span className="muted small">Key: {apiKeyStatus.maskedKey}</span>}
-          <button className="btn-secondary" onClick={() => navigate('/settings')}>
-            Settings
-          </button>
-        </div>
+        <button className="btn-secondary" onClick={() => navigate('/settings')}>
+          Settings
+        </button>
       </header>
 
       <button onClick={() => navigate('/project/new')} style={{ marginBottom: 24 }}>
@@ -43,13 +38,13 @@ export default function HomeScreen(): JSX.Element {
       {projects === null ? (
         <p className="muted">Loading…</p>
       ) : projects.length === 0 ? (
-        <div className="card">
+        <div>
           <p className="muted">No projects yet. Create one to start building a persona panel.</p>
         </div>
       ) : (
         <div className="project-grid">
           {projects.map((p) => (
-            <div key={p.id} className="card project-card" onClick={() => navigate(`/project/${p.id}`)}>
+            <div key={p.id} className="project-card" onClick={() => navigate(`/project/${p.id}`)}>
               <h3>{p.name}</h3>
               {p.description && <p className="muted small">{p.description}</p>}
               <p className="muted small">

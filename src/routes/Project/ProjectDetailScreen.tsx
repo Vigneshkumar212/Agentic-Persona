@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { Project } from '@shared/types'
+import { PROVIDERS } from '@shared/providers'
 import PersonaPanelSection from '@renderer/routes/Project/PersonaPanelSection'
 import FeedbackSchemaSection from '@renderer/routes/Project/FeedbackSchemaSection'
 
@@ -42,7 +43,7 @@ export default function ProjectDetailScreen(): JSX.Element {
         </button>
       </header>
 
-      <div className="card" style={{ maxWidth: 640 }}>
+      <div style={{ maxWidth: 640 }}>
         {project.description && <p>{project.description}</p>}
         <dl className="detail-list">
           <dt>Persona mode</dt>
@@ -51,9 +52,13 @@ export default function ProjectDetailScreen(): JSX.Element {
           <dd>{project.personaCount}</dd>
           <dt>Variance</dt>
           <dd>{project.variance}</dd>
+          <dt>Provider</dt>
+          <dd>{PROVIDERS.find((p) => p.id === project.provider)?.label ?? project.provider}</dd>
           <dt>Model</dt>
           <dd>{project.model}</dd>
-          <dt>Budget</dt>
+          <dt>Max output tokens/response</dt>
+          <dd>{project.maxOutputTokens > 0 ? project.maxOutputTokens.toLocaleString() : 'Model default'}</dd>
+          <dt>Budget per trial</dt>
           <dd>{project.budgetTokens > 0 ? `${project.budgetTokens.toLocaleString()} tokens` : 'Unlimited'}</dd>
           <dt>Cooldown</dt>
           <dd>{project.cooldownSeconds}s</dd>
@@ -63,7 +68,7 @@ export default function ProjectDetailScreen(): JSX.Element {
       {project.personaMode === 'project' ? (
         <PersonaPanelSection project={project} />
       ) : (
-        <div className="card" style={{ marginTop: 16 }}>
+        <div className="detail-section">
           <p className="muted">
             This project generates a fresh persona panel per trial. Create a trial to generate its
             panel — trials land in the next milestone.

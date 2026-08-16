@@ -23,6 +23,18 @@ function toContents(input: string | MultimodalPart[]): unknown {
   return [{ role: 'user', parts }]
 }
 
+/**
+ * maxOutputTokens=0 means "unset" in our GenerateOptions — Gemini treats an
+ * explicit 0 as a hard cap of zero tokens (empty output), so it must be
+ * omitted entirely rather than passed through, not just coerced to 0.
+ */
+function baseConfig(options: GenerateOptions): Record<string, unknown> {
+  return {
+    systemInstruction: options.systemInstruction,
+    ...(options.maxOutputTokens ? { maxOutputTokens: options.maxOutputTokens } : {})
+  }
+}
+
 function toUsage(usageMetadata: unknown): GenerateUsage {
   const meta = (usageMetadata ?? {}) as {
     promptTokenCount?: number
@@ -75,7 +87,7 @@ export class GeminiProvider implements LLMProvider {
       model: options.model,
       contents: toContents(options.input) as never,
       config: {
-        systemInstruction: options.systemInstruction,
+        ...baseConfig(options),
         responseMimeType: 'application/json',
         responseSchema: options.responseSchema as never
       }
@@ -94,7 +106,7 @@ export class GeminiProvider implements LLMProvider {
     const response = await this.client.models.generateContent({
       model: options.model,
       contents: toContents(options.input) as never,
-      config: { systemInstruction: options.systemInstruction }
+      config: baseConfig(options)
     })
     return { text: response.text ?? '', usage: toUsage(response.usageMetadata) }
   }
@@ -106,7 +118,7 @@ export class GeminiProvider implements LLMProvider {
     const stream = await this.client.models.generateContentStream({
       model: options.model,
       contents: toContents(options.input) as never,
-      config: { systemInstruction: options.systemInstruction }
+      config: baseConfig(options)
     })
 
     let fullText = ''
