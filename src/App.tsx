@@ -9,6 +9,8 @@ import ProjectDetailScreen from '@renderer/routes/Project/ProjectDetailScreen'
 import ProjectWizardScreen from '@renderer/routes/Project/ProjectWizardScreen'
 import TrialWizardScreen from '@renderer/routes/Trial/TrialWizardScreen'
 import TrialWorkspaceScreen from '@renderer/routes/Trial/TrialWorkspaceScreen'
+import ChatScreen from '@renderer/routes/Chat/ChatScreen'
+import UsageScreen from '@renderer/routes/Usage/UsageScreen'
 
 export default function App(): JSX.Element {
   const { hasCompletedWelcome, hasAnyKey, loading, refresh } = useAppStore()
@@ -47,10 +49,13 @@ export default function App(): JSX.Element {
     <Routes>
       <Route path="/" element={<HomeScreen />} />
       <Route path="/settings" element={<SettingsScreen />} />
+      <Route path="/usage" element={<UsageScreen />} />
       <Route path="/project/new" element={<ProjectWizardScreen />} />
       <Route path="/project/:projectId" element={<ProjectDetailScreen />} />
       <Route path="/project/:projectId/trial/new" element={<TrialWizardScreen />} />
       <Route path="/project/:projectId/trial/:trialId" element={<TrialWorkspaceScreen />} />
+      <Route path="/project/:projectId/chat/:personaId" element={<ChatScreen />} />
+      <Route path="/project/:projectId/trial/:trialId/chat/:personaId" element={<ChatScreen />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

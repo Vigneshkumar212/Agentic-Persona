@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import type { Persona } from '@shared/types'
 
-export default function PersonaCard({ persona }: { persona: Persona }): JSX.Element {
+interface PersonaCardProps {
+  persona: Persona
+  onChat?: () => void
+}
+
+export default function PersonaCard({ persona, onChat }: PersonaCardProps): JSX.Element {
   const [expanded, setExpanded] = useState(false)
   const p = persona.persona
 
@@ -29,9 +34,16 @@ export default function PersonaCard({ persona }: { persona: Persona }): JSX.Elem
         </div>
       )}
 
-      <button className="btn-secondary btn-small" onClick={() => setExpanded((e) => !e)}>
-        {expanded ? 'Show less' : 'Show more'}
-      </button>
+      <div className="button-row">
+        <button className="btn-secondary btn-small" onClick={() => setExpanded((e) => !e)}>
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+        {onChat && (
+          <button className="btn-secondary btn-small" onClick={onChat}>
+            Chat
+          </button>
+        )}
+      </div>
     </div>
   )
 }

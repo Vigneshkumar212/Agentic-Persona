@@ -568,3 +568,67 @@ a {
   background: var(--accent);
   border-radius: 999px;
 }
+
+.bar-value {
+  flex: 0 0 auto;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.usage-project-row {
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Persona chat                                                            */
+/* ---------------------------------------------------------------------- */
+
+.chat-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.chat-bubble {
+  max-width: 70%;
+  padding: 10px 14px;
+  border-radius: 14px;
+}
+
+.chat-bubble p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.chat-bubble-user {
+  align-self: flex-end;
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.chat-bubble-model {
+  align-self: flex-start;
+  background: var(--hover-tint);
+}
+
+.chat-input-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.chat-input-row input {
+  flex: 1;
+}
+
+.chat-input-row button {
+  margin-top: 0;
+  flex-shrink: 0;
+}

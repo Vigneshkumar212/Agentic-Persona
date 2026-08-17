@@ -8,6 +8,8 @@ import { registerProjectsIpc } from './ipc/projects'
 import { registerPersonasIpc } from './ipc/personas'
 import { registerFeedbackSchemaIpc } from './ipc/feedbackSchema'
 import { registerTrialsIpc } from './ipc/trials'
+import { registerChatsIpc } from './ipc/chats'
+import { registerUsageIpc } from './ipc/usage'
 
 const isDev = !app.isPackaged
 
@@ -57,6 +59,8 @@ function registerIpcHandlers(): void {
   registerPersonasIpc()
   registerFeedbackSchemaIpc()
   registerTrialsIpc()
+  registerChatsIpc()
+  registerUsageIpc()
 }
 
 app.whenReady().then(() => {

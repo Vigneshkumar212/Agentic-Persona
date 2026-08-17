@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Persona, Project } from '@shared/types'
 import PersonaCard from '@renderer/components/PersonaCard'
 import { runCooldown } from '@renderer/lib/cooldown'
@@ -18,6 +19,7 @@ export default function PersonaPanelSection({
   trialId = null,
   onPersonasChanged
 }: PersonaPanelSectionProps): JSX.Element {
+  const navigate = useNavigate()
   const [personas, setPersonas] = useState<Persona[] | null>(null)
   const [runMode, setRunMode] = useState<RunMode>('oneByOne')
   const [generating, setGenerating] = useState(false)
@@ -129,7 +131,17 @@ export default function PersonaPanelSection({
       {personas.length > 0 && (
         <div className="persona-grid">
           {personas.map((p) => (
-            <PersonaCard key={p.id} persona={p} />
+            <PersonaCard
+              key={p.id}
+              persona={p}
+              onChat={() =>
+                navigate(
+                  trialId
+                    ? `/project/${project.id}/trial/${trialId}/chat/${p.id}`
+                    : `/project/${project.id}/chat/${p.id}`
+                )
+              }
+            />
           ))}
         </div>
       )}

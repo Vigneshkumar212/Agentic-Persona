@@ -253,6 +253,7 @@ export interface FeedbackSchemaApi {
 
 export interface PersonasApi {
   list(projectId: string, trialId: string | null): Promise<Persona[]>
+  get(id: string): Promise<Persona | null>
   /** Generates exactly one persona, carrying forward prior one-line summaries. */
   generateNext(projectId: string, trialId: string | null): Promise<Persona>
   generatePanelSummary(projectId: string, trialId: string | null): Promise<string>
@@ -293,6 +294,57 @@ export interface TrialsApi {
   exportMarkdown(trialId: string): Promise<string | null>
 }
 
+// ---------------------------------------------------------------------------
+// Persona chat — streaming, scoped to a persona + optional trial context
+// ---------------------------------------------------------------------------
+
+export interface ChatStreamChunk {
+  chatId: string
+  textDelta: string
+}
+
+export interface ChatsApi {
+  /** One chat per (project, trial, persona) — reused across visits. */
+  findOrCreate(projectId: string, trialId: string | null, personaId: string): Promise<Chat>
+  listMessages(chatId: string): Promise<ChatMessage[]>
+  /** Resolves with the persisted assistant message once the full streamed reply completes. */
+  sendMessage(chatId: string, content: string): Promise<ChatMessage>
+  /** Subscribes to streamed reply chunks as they arrive; returns an unsubscribe function. */
+  onStreamChunk(callback: (chunk: ChatStreamChunk) => void): () => void
+}
+
+// ---------------------------------------------------------------------------
+// Usage dashboard — spend rollups from usage_log
+// ---------------------------------------------------------------------------
+
+export interface ProjectUsageTotal {
+  projectId: string
+  totalTokens: number
+  totalCost: number
+  callCount: number
+}
+
+/** trialId: null = the project-level persona panel bucket (generated before any trial exists). */
+export interface TrialUsageBucket {
+  trialId: string | null
+  totalTokens: number
+  totalCost: number
+  callCount: number
+}
+
+export interface OperationUsageBucket {
+  operation: string
+  totalTokens: number
+  totalCost: number
+  callCount: number
+}
+
+export interface UsageApi {
+  getAllProjectsUsage(): Promise<ProjectUsageTotal[]>
+  getProjectUsageByTrial(projectId: string): Promise<TrialUsageBucket[]>
+  getProjectUsageByOperation(projectId: string): Promise<OperationUsageBucket[]>
+}
+
 export interface Api {
   app: AppApi
   settings: SettingsApi
@@ -300,6 +352,8 @@ export interface Api {
   personas: PersonasApi
   feedbackSchema: FeedbackSchemaApi
   trials: TrialsApi
+  chats: ChatsApi
+  usage: UsageApi
 }
 
 declare global {

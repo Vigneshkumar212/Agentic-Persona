@@ -46,6 +46,19 @@ export interface StreamChunk {
   textDelta: string
 }
 
+export interface ChatTurn {
+  role: 'user' | 'model'
+  text: string
+}
+
+export interface ChatGenerateOptions {
+  model: string
+  systemInstruction?: string
+  /** Full conversation so far, oldest first, ending with the newest user turn. */
+  history: ChatTurn[]
+  maxOutputTokens?: number
+}
+
 export interface LLMProvider {
   /** Cheap validation call — used when the user first enters an API key. */
   validateApiKey(): Promise<{ ok: true } | { ok: false; error: string }>
@@ -59,4 +72,7 @@ export interface LLMProvider {
   generateText(options: GenerateOptions): Promise<TextResult>
 
   generateStream(options: GenerateOptions, onChunk: (chunk: StreamChunk) => void): Promise<TextResult>
+
+  /** Multi-turn streaming for chat — proper role-alternating history, not a single-shot prompt. */
+  generateChatStream(options: ChatGenerateOptions, onChunk: (chunk: StreamChunk) => void): Promise<TextResult>
 }

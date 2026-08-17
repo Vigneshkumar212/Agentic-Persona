@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Feedback, FeedbackField, FieldAggregate, Persona, Project, Trial } from '@shared/types'
 import { computeAllAggregates, latestRoundFeedback } from '@shared/aggregate'
 import { runCooldown } from '@renderer/lib/cooldown'
@@ -55,6 +56,7 @@ export default function FeedbackCollectionSection({
   personas,
   onTrialUpdate
 }: FeedbackCollectionSectionProps): JSX.Element {
+  const navigate = useNavigate()
   const [feedbackList, setFeedbackList] = useState<Feedback[] | null>(null)
   const [runMode, setRunMode] = useState<RunMode>('oneByOne')
   const [collecting, setCollecting] = useState(false)
@@ -331,6 +333,12 @@ export default function FeedbackCollectionSection({
                     )
                   })}
                   {f.freeformText && <p className="small">{f.freeformText}</p>}
+                  <button
+                    className="btn-secondary btn-small"
+                    onClick={() => navigate(`/project/${project.id}/trial/${trial.id}/chat/${f.personaId}`)}
+                  >
+                    Chat
+                  </button>
                 </div>
               )
             })}

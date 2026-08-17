@@ -26,9 +26,14 @@ export default function HomeScreen(): JSX.Element {
     <div className="screen">
       <header className="page-header">
         <h1>Projects</h1>
-        <button className="btn-secondary" onClick={() => navigate('/settings')}>
-          Settings
-        </button>
+        <div className="button-row">
+          <button className="btn-secondary" onClick={() => navigate('/usage')}>
+            Usage
+          </button>
+          <button className="btn-secondary" onClick={() => navigate('/settings')}>
+            Settings
+          </button>
+        </div>
       </header>
 
       <button onClick={() => navigate('/project/new')} style={{ marginBottom: 24 }}>

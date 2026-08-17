@@ -2,16 +2,22 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type {
   Api,
   ApiKeyStatus,
+  Chat,
+  ChatMessage,
+  ChatStreamChunk,
   CreateProjectInput,
   CreateTrialInput,
   Feedback,
   FeedbackSchema,
   PickAndAddDocumentsResult,
+  OperationUsageBucket,
   Persona,
   Project,
+  ProjectUsageTotal,
   Trial,
   TrialDocument,
-  TrialSummary
+  TrialSummary,
+  TrialUsageBucket
 } from '../../shared/types'
 import type { BudgetCheckResult } from '../../shared/cost'
 
@@ -48,6 +54,7 @@ const api: Api = {
   personas: {
     list: (projectId: string, trialId: string | null): Promise<Persona[]> =>
       ipcRenderer.invoke('personas:list', projectId, trialId),
+    get: (id: string): Promise<Persona | null> => ipcRenderer.invoke('personas:get', id),
     generateNext: (projectId: string, trialId: string | null): Promise<Persona> =>
       ipcRenderer.invoke('personas:generate-next', projectId, trialId),
     generatePanelSummary: (projectId: string, trialId: string | null): Promise<string> =>
@@ -79,6 +86,25 @@ const api: Api = {
       ipcRenderer.invoke('trials:generate-summary', trialId),
     exportMarkdown: (trialId: string): Promise<string | null> =>
       ipcRenderer.invoke('trials:export-markdown', trialId)
+  },
+  chats: {
+    findOrCreate: (projectId: string, trialId: string | null, personaId: string): Promise<Chat> =>
+      ipcRenderer.invoke('chats:find-or-create', projectId, trialId, personaId),
+    listMessages: (chatId: string): Promise<ChatMessage[]> => ipcRenderer.invoke('chats:list-messages', chatId),
+    sendMessage: (chatId: string, content: string): Promise<ChatMessage> =>
+      ipcRenderer.invoke('chats:send-message', chatId, content),
+    onStreamChunk: (callback: (chunk: ChatStreamChunk) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, chunk: ChatStreamChunk): void => callback(chunk)
+      ipcRenderer.on('chats:stream-chunk', listener)
+      return () => ipcRenderer.removeListener('chats:stream-chunk', listener)
+    }
+  },
+  usage: {
+    getAllProjectsUsage: (): Promise<ProjectUsageTotal[]> => ipcRenderer.invoke('usage:get-all-projects'),
+    getProjectUsageByTrial: (projectId: string): Promise<TrialUsageBucket[]> =>
+      ipcRenderer.invoke('usage:get-project-by-trial', projectId),
+    getProjectUsageByOperation: (projectId: string): Promise<OperationUsageBucket[]> =>
+      ipcRenderer.invoke('usage:get-project-by-operation', projectId)
   }
 }
 

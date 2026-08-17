@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai'
 import type {
+  ChatGenerateOptions,
   GenerateOptions,
   GenerateUsage,
   LLMProvider,
@@ -28,11 +29,31 @@ function toContents(input: string | MultimodalPart[]): unknown {
  * explicit 0 as a hard cap of zero tokens (empty output), so it must be
  * omitted entirely rather than passed through, not just coerced to 0.
  */
-function baseConfig(options: GenerateOptions): Record<string, unknown> {
+function baseConfig(options: {
+  systemInstruction?: string
+  maxOutputTokens?: number
+}): Record<string, unknown> {
   return {
     systemInstruction: options.systemInstruction,
     ...(options.maxOutputTokens ? { maxOutputTokens: options.maxOutputTokens } : {})
   }
+}
+
+async function streamToResult(
+  stream: AsyncGenerator<{ text?: string; usageMetadata?: unknown }>,
+  onChunk: (chunk: StreamChunk) => void
+): Promise<TextResult> {
+  let fullText = ''
+  let usage: GenerateUsage = { inputTokens: 0, outputTokens: 0 }
+  for await (const chunk of stream) {
+    const delta = chunk.text ?? ''
+    if (delta) {
+      fullText += delta
+      onChunk({ textDelta: delta })
+    }
+    if (chunk.usageMetadata) usage = toUsage(chunk.usageMetadata)
+  }
+  return { text: fullText, usage }
 }
 
 function toUsage(usageMetadata: unknown): GenerateUsage {
@@ -120,18 +141,20 @@ export class GeminiProvider implements LLMProvider {
       contents: toContents(options.input) as never,
       config: baseConfig(options)
     })
+    return streamToResult(stream, onChunk)
+  }
 
-    let fullText = ''
-    let usage: GenerateUsage = { inputTokens: 0, outputTokens: 0 }
-    for await (const chunk of stream) {
-      const delta = chunk.text ?? ''
-      if (delta) {
-        fullText += delta
-        onChunk({ textDelta: delta })
-      }
-      if (chunk.usageMetadata) usage = toUsage(chunk.usageMetadata)
-    }
-    return { text: fullText, usage }
+  async generateChatStream(
+    options: ChatGenerateOptions,
+    onChunk: (chunk: StreamChunk) => void
+  ): Promise<TextResult> {
+    const contents = options.history.map((turn) => ({ role: turn.role, parts: [{ text: turn.text }] }))
+    const stream = await this.client.models.generateContentStream({
+      model: options.model,
+      contents: contents as never,
+      config: baseConfig(options)
+    })
+    return streamToResult(stream, onChunk)
   }
 }
 

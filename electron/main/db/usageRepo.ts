@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { getDb } from './database'
 import { estimateCostUsd } from '../../../shared/cost'
 import type { GenerateUsage } from '../llm/LLMProvider'
+import type { OperationUsageBucket, ProjectUsageTotal, TrialUsageBucket } from '../../../shared/types'
 
 export function logUsage(
   projectId: string,
@@ -33,4 +34,51 @@ export function getUsageTotal(projectId: string, trialId: string | null): number
     )
     .get(projectId, trialId) as { total: number }
   return row.total
+}
+
+/** Rollup across every project, for the top-level usage dashboard. */
+export function getAllProjectsUsage(): ProjectUsageTotal[] {
+  return getDb()
+    .prepare(
+      `SELECT
+         project_id AS projectId,
+         COALESCE(SUM(tokens_in + tokens_out), 0) AS totalTokens,
+         COALESCE(SUM(cost_estimate), 0) AS totalCost,
+         COUNT(*) AS callCount
+       FROM usage_log
+       GROUP BY project_id`
+    )
+    .all() as ProjectUsageTotal[]
+}
+
+/** One row per budget bucket: trialId null = the project-level persona panel, otherwise that trial. */
+export function getProjectUsageByTrial(projectId: string): TrialUsageBucket[] {
+  return getDb()
+    .prepare(
+      `SELECT
+         trial_id AS trialId,
+         COALESCE(SUM(tokens_in + tokens_out), 0) AS totalTokens,
+         COALESCE(SUM(cost_estimate), 0) AS totalCost,
+         COUNT(*) AS callCount
+       FROM usage_log
+       WHERE project_id = ?
+       GROUP BY trial_id`
+    )
+    .all(projectId) as TrialUsageBucket[]
+}
+
+export function getProjectUsageByOperation(projectId: string): OperationUsageBucket[] {
+  return getDb()
+    .prepare(
+      `SELECT
+         operation,
+         COALESCE(SUM(tokens_in + tokens_out), 0) AS totalTokens,
+         COALESCE(SUM(cost_estimate), 0) AS totalCost,
+         COUNT(*) AS callCount
+       FROM usage_log
+       WHERE project_id = ?
+       GROUP BY operation
+       ORDER BY totalTokens DESC`
+    )
+    .all(projectId) as OperationUsageBucket[]
 }
